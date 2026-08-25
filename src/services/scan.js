@@ -1,4 +1,11 @@
-const _rawBaseUrl = import.meta.env.VITE_SCAN_URL || '/api/moov-events-scan'
+// Meme correctif que moov-events/src/services/auth.js : deduit le bon
+// backend (test vs prod) du chemin de deploiement reel plutot que de
+// dependre d'un VITE_SCAN_URL absent en pratique (aucun .env.test/.env.prod
+// pour ce frontend), qui faisait sinon toujours retomber sur le backend PROD
+// meme depuis la page test.
+const _appBase = import.meta.env.BASE_URL || '/'
+const _defaultApiPath = _appBase.startsWith('/moov-events-scan-test') ? '/api/moov-events-scan-test' : '/api/moov-events-scan'
+const _rawBaseUrl = import.meta.env.VITE_SCAN_URL || _defaultApiPath
 const BASE_URL = _rawBaseUrl.startsWith('/') ? window.location.origin + _rawBaseUrl : _rawBaseUrl
 
 const CODE_KEY = 'moov-events-scan_code'
