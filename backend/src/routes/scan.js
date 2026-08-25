@@ -2,7 +2,7 @@
 const express = require('express')
 const router = express.Router()
 
-const { validateScan, validateSerial } = require('../services/moovEventsClient')
+const { validateScan, validateSerial, getAccessCodeInfo, getScanHistory } = require('../services/moovEventsClient')
 const { log, LEVELS, TYPES } = require('../services/activityLogger')
 
 // -- Health check ------------------------------------------------------------
@@ -59,6 +59,37 @@ router.post('/validate-serial', async (req, res) => {
     log({ type: TYPES.scan, level: LEVELS.error, action: `Validation par code serie echouee, ${err.message}`,
       httpStatus: 502, durationMs: Date.now() - start, meta: { code, error: err.message } })
     return res.status(502).json({ result: 'error', message: 'Service de validation indisponible.' })
+  }
+})
+
+// -- GET /access-code-info -------------------------------------------------------
+// Nom de l'evenement associe au code d'acces (en-tete du scanner, voir
+// ScannerView.vue), au lieu du seul code brut.
+router.get('/access-code-info', async (req, res) => {
+  const { code, env } = req.query || {}
+  if (!code) return res.status(400).json({ ok: false, reason: 'missing_params' })
+  try {
+    const result = await getAccessCodeInfo({ code, env })
+    return res.json(result)
+  } catch (err) {
+    console.error('[moov-events-scan/access-code-info]', err.message)
+    return res.status(502).json({ ok: false, message: 'Service indisponible.' })
+  }
+})
+
+// -- GET /history -----------------------------------------------------------------
+// Historique persistant des scans effectues avec ce code d'acces (voir
+// activityLogger.js#getScanHistoryForCode cote moov-events) : contrairement
+// aux compteurs de session du frontend, survit a un rechargement de page.
+router.get('/history', async (req, res) => {
+  const { code, page, pageSize, env } = req.query || {}
+  if (!code) return res.status(400).json({ ok: false, reason: 'missing_params' })
+  try {
+    const result = await getScanHistory({ code, page, pageSize, env })
+    return res.json(result)
+  } catch (err) {
+    console.error('[moov-events-scan/history]', err.message)
+    return res.status(502).json({ ok: false, message: 'Service indisponible.' })
   }
 })
 

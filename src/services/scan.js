@@ -59,3 +59,31 @@ export async function validateSerial(code, serialCode) {
   if (res.status >= 500) throw new Error('Service de validation indisponible.')
   return data
 }
+
+/**
+ * Nom de l'evenement associe a ce code d'acces, affiche dans l'en-tete du
+ * scanner (voir ScannerView.vue) au lieu du seul code brut.
+ * @returns {Promise<{ ok: boolean, eventTitle?: string, label?: string }>}
+ */
+export async function getAccessCodeInfo(code) {
+  const url = new URL(`${BASE_URL}/access-code-info`)
+  url.searchParams.set('code', code)
+  url.searchParams.set('env', ENV)
+  const res = await fetch(url)
+  return res.json().catch(() => ({ ok: false }))
+}
+
+/**
+ * Historique persistant des scans effectues avec ce code d'acces (survit a
+ * un rechargement de page, contrairement aux compteurs de session).
+ * @returns {Promise<{ ok: boolean, items?: object[], total?: number, page?: number, pageSize?: number }>}
+ */
+export async function getScanHistory(code, page = 1, pageSize = 20) {
+  const url = new URL(`${BASE_URL}/history`)
+  url.searchParams.set('code', code)
+  url.searchParams.set('page', page)
+  url.searchParams.set('pageSize', pageSize)
+  url.searchParams.set('env', ENV)
+  const res = await fetch(url)
+  return res.json().catch(() => ({ ok: false }))
+}

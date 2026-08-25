@@ -55,4 +55,39 @@ async function validateSerial({ code, serialCode, env }) {
   return data
 }
 
-module.exports = { validateScan, validateSerial }
+/**
+ * Infos de l'evenement associe a un code d'acces (nom affiche dans l'en-tete
+ * du scanner, voir ScannerView.vue), et historique persistant des scans
+ * effectues avec ce code (survit a un rechargement de page).
+ * @param {{ code: string, env?: 'prod'|'test' }} params
+ */
+async function getAccessCodeInfo({ code, env }) {
+  const secret = process.env.SCAN_SERVICE_SECRET
+  if (!secret) throw new Error('SCAN_SERVICE_SECRET non configure')
+
+  const url = new URL(`${baseUrlFor(env)}/internal/scan/access-code-info`)
+  url.searchParams.set('code', code)
+  const res = await fetch(url, { headers: { 'x-scan-secret': secret } })
+  const data = await res.json().catch(() => ({}))
+  if (res.status >= 500) throw new Error('moov-events indisponible')
+  return data
+}
+
+/**
+ * @param {{ code: string, page?: number, pageSize?: number, env?: 'prod'|'test' }} params
+ */
+async function getScanHistory({ code, page, pageSize, env }) {
+  const secret = process.env.SCAN_SERVICE_SECRET
+  if (!secret) throw new Error('SCAN_SERVICE_SECRET non configure')
+
+  const url = new URL(`${baseUrlFor(env)}/internal/scan/history`)
+  url.searchParams.set('code', code)
+  if (page) url.searchParams.set('page', page)
+  if (pageSize) url.searchParams.set('pageSize', pageSize)
+  const res = await fetch(url, { headers: { 'x-scan-secret': secret } })
+  const data = await res.json().catch(() => ({}))
+  if (res.status >= 500) throw new Error('moov-events indisponible')
+  return data
+}
+
+module.exports = { validateScan, validateSerial, getAccessCodeInfo, getScanHistory }
