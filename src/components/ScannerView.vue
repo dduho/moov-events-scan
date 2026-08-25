@@ -66,7 +66,7 @@
       </div>
     </div>
 
-    <ResultOverlay :result="lastResult?.result" :ticket="lastResult?.ticket" @dismiss="dismissResult" />
+    <ResultOverlay :result="lastResult?.result" :ticket="lastResult?.ticket" @dismiss="dismissResult(true)" />
   </div>
 </template>
 
@@ -82,6 +82,13 @@ defineEmits(['logout'])
 let scanner = null
 let paused = false
 let dismissTimer = null
+// Meme code que le precedent scan traite (valide ou non) : la camera continue
+// de decoder en continu (fps:10) meme code immobile dans le cadre pendant
+// tout l'affichage du resultat, et le re-comptait a chaque fois qu'elle se
+// depausait automatiquement (2.2s), incrementant "Rejetes" en boucle pour un
+// seul et meme ticket refuse. Ignore desormais tout code identique au
+// precedent tant qu'il n'a pas ete explicitement rejoue (voir dismissResult).
+let lastDecodedText = null
 
 const lastResult = ref(null)
 const scannedCount = ref(0)
@@ -124,7 +131,8 @@ async function submitManual() {
 }
 
 async function onDecoded(decodedText) {
-  if (paused) return
+  if (paused || decodedText === lastDecodedText) return
+  lastDecodedText = decodedText
   paused = true
   scannedCount.value++
 
@@ -136,9 +144,14 @@ async function onDecoded(decodedText) {
   }
 }
 
-function dismissResult() {
+function dismissResult(manual = false) {
   lastResult.value = null
   paused = false
+  // Dismiss manuel (tap sur le resultat) : le controleur veut explicitement
+  // pouvoir rejouer le meme code (ex. re-verifier apres avoir corrige
+  // quelque chose cote client). Le dismiss automatique (timeout) ne touche
+  // jamais lastDecodedText : voir sa declaration plus haut.
+  if (manual) lastDecodedText = null
   clearTimeout(dismissTimer)
 }
 
@@ -151,8 +164,29 @@ async function startCamera() {
       onDecoded,
       () => {}, // echec de decodage par frame, normal en continu, ignore
     )
+    applyZoomIfAvailable()
   } catch (err) {
     console.error('[scanner] impossible de demarrer la camera', err)
+  }
+}
+
+// Bug reel constate : sur les telephones a plusieurs objectifs arriere,
+// facingMode:'environment' seul choisit parfois l'ultra grand-angle (image
+// trop dezoomee, QR minuscule dans le cadre). Le zoom optique n'est pas
+// pilotable depuis le web, mais un zoom numerique via la contrainte MediaTrack
+// standard "zoom" (supportee par la plupart des Android/Chrome, absente sur
+// iOS Safari, d'ou le garde-fou capabilities.zoom) recadre l'image de facon
+// equivalente pour la lecture du QR. Best-effort, jamais bloquant si absent.
+function applyZoomIfAvailable() {
+  try {
+    const capabilities = scanner?.getRunningTrackCapabilities?.()
+    if (!capabilities?.zoom) return
+    const desired = Math.min(2, capabilities.zoom.max ?? 1)
+    if (desired > (capabilities.zoom.min ?? 1)) {
+      scanner.applyVideoConstraints({ advanced: [{ zoom: desired }] })
+    }
+  } catch (err) {
+    console.error('[scanner] zoom non applique', err)
   }
 }
 

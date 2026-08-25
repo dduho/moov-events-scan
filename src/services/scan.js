@@ -8,6 +8,16 @@ const _defaultApiPath = _appBase.startsWith('/moov-events-scan-test') ? '/api/mo
 const _rawBaseUrl = import.meta.env.VITE_SCAN_URL || _defaultApiPath
 const BASE_URL = _rawBaseUrl.startsWith('/') ? window.location.origin + _rawBaseUrl : _rawBaseUrl
 
+// Bug reel constate : ce backend ne transmettait jamais quel moov-events
+// (test ou prod) interroger, moovEventsClient.js#baseUrlFor y defaut
+// systematiquement sur PROD (voir sa doc). Un code d'acces/ticket cree sur
+// l'instance test de moov-events etait donc introuvable ("code d'acces
+// invalide") des que la validation passait par le backend PROD de
+// moov-events, meme scanne depuis moov-events-scan-test. ENV derive du meme
+// chemin de deploiement que BASE_URL ci-dessus (meme principe que
+// moov-events/src/services/auth.js).
+const ENV = _appBase.startsWith('/moov-events-scan-test') ? 'test' : 'prod'
+
 const CODE_KEY = 'moov-events-scan_code'
 
 export function getStoredCode() {
@@ -27,7 +37,7 @@ export async function validateScan(code, payload) {
   const res = await fetch(`${BASE_URL}/validate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, payload }),
+    body: JSON.stringify({ code, payload, env: ENV }),
   })
   const data = await res.json().catch(() => ({}))
   if (res.status >= 500) throw new Error('Service de validation indisponible.')
@@ -43,7 +53,7 @@ export async function validateSerial(code, serialCode) {
   const res = await fetch(`${BASE_URL}/validate-serial`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, serialCode }),
+    body: JSON.stringify({ code, serialCode, env: ENV }),
   })
   const data = await res.json().catch(() => ({}))
   if (res.status >= 500) throw new Error('Service de validation indisponible.')
