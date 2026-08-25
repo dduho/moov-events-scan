@@ -5,6 +5,14 @@ const router = express.Router()
 const { validateScan } = require('../services/moovEventsClient')
 const { log, LEVELS, TYPES } = require('../services/activityLogger')
 
+// -- Health check ------------------------------------------------------------
+// Servi aussi ICI (en plus de /health en racine, index.js) : apiProxyMode=
+// preserve-prefix transmet /api/moov-events-scan/health tel quel au backend,
+// sans jamais retirer le prefixe (voir scripts/gen-nginx.js).
+router.get('/health', (_req, res) => {
+  res.json({ status: 'ok', app: 'moov-events-scan' })
+})
+
 // -- POST /validate ------------------------------------------------------------
 // Le "code" (code d'acces evenement, cree en backoffice) tient lieu
 // d'authentification pour le controleur : pas de compte, pas de mot de
