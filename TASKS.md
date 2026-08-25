@@ -17,6 +17,11 @@ Port retenu : 3211/3311 (prod/test).
 - [x] Build `build`/`build:test` vérifiés sans erreur
 - [ ] Test réel sur téléphone (permission caméra, cadrage) : pas encore fait, seulement vérifié
       par build et revue de code
+- [x] Saisie manuelle du code série (8 chiffres) en alternative au scan caméra, nécessaire pour
+      valider un ticket acheté par USSD (aucun QR possible sur un écran texte, voir
+      `servlets/moov-events/TASKS.md` phase 8) : nouveau bouton "Pas de QR ? Saisir le code" dans
+      `ScannerView.vue`, caméra coupée pendant la saisie, `/validate-serial` (backend) proxie vers
+      `moov-events/internal/scan/validate-serial`, même compteurs/overlay de résultat que le scan
 - [x] Déployé (test + prod) : voir `servlets/moov-events/TASKS.md` section Déploiement pour le
       détail complet (secrets, ports, apps.json, nginx). `/moov-events-scan/` et
       `/moov-events-scan-test/` répondent 200, `/api/moov-events-scan/validate` répond
