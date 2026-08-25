@@ -26,3 +26,14 @@ Port retenu : 3211/3311 (prod/test).
       détail complet (secrets, ports, apps.json, nginx). `/moov-events-scan/` et
       `/moov-events-scan-test/` répondent 200, `/api/moov-events-scan/validate` répond
       correctement.
+- [x] **Bug réel** : `scan.js` n'envoyait jamais quel moov-events (test/prod) interroger, la
+      validation retombait donc systématiquement sur le backend PROD de moov-events (bases
+      Postgres séparées) même scanné depuis l'instance test, d'où des codes d'accès/tickets
+      pourtant valides rejetés en "Code d'accès invalide". `env` (déduit du chemin de
+      déploiement de ce frontend) transmis à `/validate` et `/validate-serial`.
+- [x] Zoom caméra appliqué au démarrage (contrainte MediaTrack standard, best-effort) : évite
+      l'ultra grand-angle sur les téléphones à plusieurs objectifs, qui rendait le QR minuscule
+      dans le cadre.
+- [x] Compteur "Rejetés" qui incrémentait en boucle pour un même QR immobile dans le cadre
+      (la caméra redécode en continu) : un code strictement identique au précédent est
+      désormais ignoré tant qu'il n'a pas été explicitement rejoué (tap manuel sur le résultat).
