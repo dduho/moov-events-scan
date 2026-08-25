@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-prod/
+dist-test/
+backend/node_modules/
+backend/.env
+backend/.env.test
+backend/data/
+.DS_Store
