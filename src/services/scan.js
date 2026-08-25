@@ -26,3 +26,19 @@ export async function validateScan(code, payload) {
   if (res.status >= 500) throw new Error('Service de validation indisponible.')
   return data
 }
+
+/**
+ * Alternative au scan QR : validation par le code serie a 8 chiffres saisi a
+ * la main (achat USSD, ou QR illisible/perdu).
+ * @returns {Promise<{ result: string, ticket?: object, consumedAt?: string }>}
+ */
+export async function validateSerial(code, serialCode) {
+  const res = await fetch(`${BASE_URL}/validate-serial`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, serialCode }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (res.status >= 500) throw new Error('Service de validation indisponible.')
+  return data
+}

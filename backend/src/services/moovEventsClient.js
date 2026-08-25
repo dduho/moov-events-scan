@@ -32,4 +32,27 @@ async function validateScan({ code, payload, env }) {
   return data
 }
 
-module.exports = { validateScan }
+/**
+ * Alternative au scan QR : validation par le code serie a 8 chiffres saisi a
+ * la main par le controleur (voir CodeEntry manuel dans ScannerView.vue).
+ * @param {{ code: string, serialCode: string, env?: 'prod'|'test' }} params
+ * @returns {Promise<object>} la reponse telle que renvoyee par
+ *   moov-events (voir backend/src/routes/internal.js:/scan/validate-serial)
+ */
+async function validateSerial({ code, serialCode, env }) {
+  const secret = process.env.SCAN_SERVICE_SECRET
+  if (!secret) throw new Error('SCAN_SERVICE_SECRET non configure')
+
+  const res = await fetch(`${baseUrlFor(env)}/internal/scan/validate-serial`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-scan-secret': secret },
+    body: JSON.stringify({ code, serialCode }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (res.status >= 500) {
+    throw new Error(data.result === 'error' ? 'moov-events indisponible' : `HTTP ${res.status}`)
+  }
+  return data
+}
+
+module.exports = { validateScan, validateSerial }
