@@ -49,3 +49,14 @@ Port retenu : 3211/3311 (prod/test).
 - [x] Historique persistant des scans par code d'accès (bouton "Historique"), survit à un
       rechargement de page contrairement aux compteurs de session, interroge le journal
       d'activité de moov-events filtré par code (`GET /internal/scan/history`).
+- [x] **Modale de confirmation avant validation réelle** (demande explicite : éviter qu'une
+      erreur de manipulation ne consomme un ticket par accident). Le scan/la saisie manuelle
+      n'appelle plus directement la consommation : un premier appel (`confirm` absent) identifie
+      le ticket côté moov-events SANS jamais le consommer ni rien loguer, et répond
+      `pending_confirm` si le ticket serait par ailleurs valide. `ScannerView.vue` affiche alors
+      `ConfirmModal.vue` (libellé du ticket + nom de l'événement) ; "Confirmer" rappelle le même
+      identifiant (QR ou code série) avec `confirm:true`, qui revalide tout depuis zéro côté
+      serveur (le ticket a pu changer d'état pendant que le contrôleur lisait la modale) avant de
+      consommer réellement. "Annuler" ne défait rien (rien n'a jamais été consommé) et envoie un
+      simple événement d'audit (`POST /internal/scan/cancel`), pour garder une trace complète des
+      scans annulés sans risque sur l'état des tickets.

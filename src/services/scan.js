@@ -31,13 +31,20 @@ export function clearStoredCode() {
 }
 
 /**
+ * Sans `confirm` (par defaut), identifie le ticket SANS le consommer : la
+ * reponse peut etre 'pending_confirm' (ticket par ailleurs valide, en attente
+ * de validation explicite du controleur dans la modale de confirmation, voir
+ * ScannerView.vue). Il faut alors rappeler avec confirm:true pour consommer
+ * reellement, une fois le controleur satisfait des details affiches.
+ * Demande explicite : eviter qu'une simple erreur de manipulation (mauvais
+ * ticket, scan accidentel) ne consomme un ticket sans confirmation humaine.
  * @returns {Promise<{ result: string, ticket?: object, consumedAt?: string }>}
  */
-export async function validateScan(code, payload) {
+export async function validateScan(code, payload, confirm = false) {
   const res = await fetch(`${BASE_URL}/validate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, payload, env: ENV }),
+    body: JSON.stringify({ code, payload, confirm, env: ENV }),
   })
   const data = await res.json().catch(() => ({}))
   if (res.status >= 500) throw new Error('Service de validation indisponible.')
@@ -46,18 +53,34 @@ export async function validateScan(code, payload) {
 
 /**
  * Alternative au scan QR : validation par le code serie a 8 chiffres saisi a
- * la main (achat USSD, ou QR illisible/perdu).
+ * la main (achat USSD, ou QR illisible/perdu). Meme flux de confirmation en
+ * deux temps que validateScan ci-dessus.
  * @returns {Promise<{ result: string, ticket?: object, consumedAt?: string }>}
  */
-export async function validateSerial(code, serialCode) {
+export async function validateSerial(code, serialCode, confirm = false) {
   const res = await fetch(`${BASE_URL}/validate-serial`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, serialCode, env: ENV }),
+    body: JSON.stringify({ code, serialCode, confirm, env: ENV }),
   })
   const data = await res.json().catch(() => ({}))
   if (res.status >= 500) throw new Error('Service de validation indisponible.')
   return data
+}
+
+/**
+ * Le controleur a annule la confirmation (mauvais ticket, erreur de
+ * manipulation...) : rien n'a jamais ete consomme, simple trace d'audit.
+ * Best-effort : une erreur reseau ici ne doit jamais bloquer le controleur.
+ */
+export async function cancelScan(code, ticket) {
+  try {
+    await fetch(`${BASE_URL}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, ticket, env: ENV }),
+    })
+  } catch { /* audit uniquement, jamais bloquant */ }
 }
 
 /**

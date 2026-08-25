@@ -2,7 +2,7 @@
 const express = require('express')
 const router = express.Router()
 
-const { validateScan, validateSerial, getAccessCodeInfo, getScanHistory } = require('../services/moovEventsClient')
+const { validateScan, validateSerial, cancelScan, getAccessCodeInfo, getScanHistory } = require('../services/moovEventsClient')
 const { log, LEVELS, TYPES } = require('../services/activityLogger')
 
 // -- Health check ------------------------------------------------------------
@@ -19,13 +19,13 @@ router.get('/health', (_req, res) => {
 // passe, le code est saisi une fois a la connexion et renvoye a chaque scan.
 router.post('/validate', async (req, res) => {
   const start = Date.now()
-  const { code, payload, env } = req.body || {}
+  const { code, payload, confirm, env } = req.body || {}
   if (!code || !payload) {
     return res.status(400).json({ result: 'invalid', reason: 'missing_params' })
   }
 
   try {
-    const result = await validateScan({ code, payload, env })
+    const result = await validateScan({ code, payload, confirm, env })
     log({ type: TYPES.scan, level: result.result === 'valid' ? LEVELS.success : LEVELS.warning,
       action: `Scan proxie, resultat=${result.result}`, httpStatus: 200,
       durationMs: Date.now() - start, meta: { code, result: result.result } })
@@ -43,13 +43,13 @@ router.post('/validate', async (req, res) => {
 // chiffres du ticket (achat USSD, ou QR illisible/perdu).
 router.post('/validate-serial', async (req, res) => {
   const start = Date.now()
-  const { code, serialCode, env } = req.body || {}
+  const { code, serialCode, confirm, env } = req.body || {}
   if (!code || !serialCode) {
     return res.status(400).json({ result: 'invalid', reason: 'missing_params' })
   }
 
   try {
-    const result = await validateSerial({ code, serialCode, env })
+    const result = await validateSerial({ code, serialCode, confirm, env })
     log({ type: TYPES.scan, level: result.result === 'valid' ? LEVELS.success : LEVELS.warning,
       action: `Validation par code serie, resultat=${result.result}`, httpStatus: 200,
       durationMs: Date.now() - start, meta: { code, result: result.result } })
@@ -59,6 +59,22 @@ router.post('/validate-serial', async (req, res) => {
     log({ type: TYPES.scan, level: LEVELS.error, action: `Validation par code serie echouee, ${err.message}`,
       httpStatus: 502, durationMs: Date.now() - start, meta: { code, error: err.message } })
     return res.status(502).json({ result: 'error', message: 'Service de validation indisponible.' })
+  }
+})
+
+// -- POST /cancel -----------------------------------------------------------------
+// Le controleur a annule la confirmation dans la modale (mauvais ticket,
+// erreur de manipulation...) : rien n'a jamais ete consomme, simple audit.
+router.post('/cancel', async (req, res) => {
+  const { code, ticket, env } = req.body || {}
+  if (!code) return res.status(400).json({ ok: false, reason: 'missing_params' })
+
+  try {
+    const result = await cancelScan({ code, ticket, env })
+    return res.json(result)
+  } catch (err) {
+    console.error('[moov-events-scan/cancel]', err.message)
+    return res.status(502).json({ ok: false })
   }
 })
 

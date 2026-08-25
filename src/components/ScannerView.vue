@@ -93,6 +93,7 @@
       </div>
     </div>
 
+    <ConfirmModal :ticket="pendingConfirm?.ticket" :confirming="confirming" @confirm="confirmPending" @cancel="cancelPending" />
     <ResultOverlay :result="lastResult?.result" :ticket="lastResult?.ticket" @dismiss="dismissResult(true)" />
   </div>
 </template>
@@ -101,7 +102,8 @@
 import { ref, reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { Html5Qrcode } from 'html5-qrcode'
 import ResultOverlay from './ResultOverlay.vue'
-import { validateScan, validateSerial, getAccessCodeInfo, getScanHistory } from '../services/scan'
+import ConfirmModal from './ConfirmModal.vue'
+import { validateScan, validateSerial, cancelScan, getAccessCodeInfo, getScanHistory } from '../services/scan'
 
 const props = defineProps({ code: { type: String, required: true } })
 defineEmits(['logout'])
@@ -157,6 +159,15 @@ const lastResult = ref(null)
 const scannedCount = ref(0)
 const counts = reactive({ valid: 0, already_used: 0, rejected: 0 })
 
+// Demande explicite : ne jamais valider un ticket directement au scan, pour
+// eviter qu'une simple erreur de manipulation (mauvais ticket, scan
+// accidentel) ne consomme une entree sans verification humaine. Le premier
+// appel (confirm=false, implicite) identifie le ticket SANS le consommer ; si
+// le resultat est 'pending_confirm', on affiche la modale et on attend la
+// decision explicite du controleur avant de rappeler avec confirm:true.
+const pendingConfirm = ref(null) // { matchedVia: 'qr'|'serial', payload, ticket }
+const confirming = ref(false)
+
 const manualMode = ref(false)
 const manualCode = ref('')
 const manualSubmitting = ref(false)
@@ -186,7 +197,11 @@ async function submitManual() {
   scannedCount.value++
   try {
     const data = await validateSerial(props.code, digits)
-    recordResult(data)
+    if (data.result === 'pending_confirm') {
+      pendingConfirm.value = { matchedVia: 'serial', payload: digits, ticket: data.ticket }
+    } else {
+      recordResult(data)
+    }
   } catch {
     recordResult({ result: 'error' })
   } finally {
@@ -202,6 +217,13 @@ async function onDecoded(decodedText) {
 
   try {
     const data = await validateScan(props.code, decodedText)
+    if (data.result === 'pending_confirm') {
+      // Reste `paused` : la camera continue de tourner mais on ignore les
+      // frames suivantes tant que le controleur n'a pas tranche (confirmer
+      // ou annuler), voir confirmPending()/cancelPending() ci-dessous.
+      pendingConfirm.value = { matchedVia: 'qr', payload: decodedText, ticket: data.ticket }
+      return
+    }
     const isRepeat = decodedText === lastCode && data.result === lastResultForCode
     lastCode = decodedText
     lastResultForCode = data.result
@@ -211,6 +233,40 @@ async function onDecoded(decodedText) {
     lastCode = decodedText
     lastResultForCode = 'error'
   }
+}
+
+// Le controleur a verifie les details dans la modale et valide : on rappelle
+// le meme identifiant (QR ou code serie) avec confirm:true, qui revalide tout
+// depuis zero cote serveur (le ticket a pu changer d'etat entre-temps, ex.
+// consomme par un autre controleur) avant de reellement le consommer.
+async function confirmPending() {
+  if (!pendingConfirm.value || confirming.value) return
+  const { matchedVia, payload } = pendingConfirm.value
+  confirming.value = true
+  try {
+    const data = matchedVia === 'serial'
+      ? await validateSerial(props.code, payload, true)
+      : await validateScan(props.code, payload, true)
+    lastCode = payload
+    lastResultForCode = data.result
+    recordResult(data)
+  } catch {
+    recordResult({ result: 'error' })
+  } finally {
+    confirming.value = false
+    pendingConfirm.value = null
+  }
+}
+
+// Annulation explicite (mauvais ticket, erreur de manipulation...) : rien n'a
+// jamais ete consomme, on trace juste l'evenement pour l'audit puis on
+// reprend le scan immediatement, sans afficher de resultat.
+function cancelPending() {
+  if (pendingConfirm.value) {
+    cancelScan(props.code, pendingConfirm.value.ticket)
+  }
+  pendingConfirm.value = null
+  paused = false
 }
 
 function dismissResult() {

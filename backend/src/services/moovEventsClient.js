@@ -12,18 +12,21 @@ function baseUrlFor(env) {
 }
 
 /**
- * @param {{ code: string, payload: string, env?: 'prod'|'test' }} params
+ * @param {{ code: string, payload: string, confirm?: boolean, env?: 'prod'|'test' }} params
  * @returns {Promise<object>} la reponse telle que renvoyee par
- *   moov-events (voir backend/src/routes/internal.js:/scan/validate)
+ *   moov-events (voir backend/src/routes/internal.js:/scan/validate). Sans
+ *   `confirm`, la reponse peut etre 'pending_confirm' (rien consomme, voir
+ *   doc de resolveAndConsume cote moov-events) : le controleur doit rappeler
+ *   avec confirm:true apres validation dans la modale (ScannerView.vue).
  */
-async function validateScan({ code, payload, env }) {
+async function validateScan({ code, payload, confirm, env }) {
   const secret = process.env.SCAN_SERVICE_SECRET
   if (!secret) throw new Error('SCAN_SERVICE_SECRET non configure')
 
   const res = await fetch(`${baseUrlFor(env)}/internal/scan/validate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-scan-secret': secret },
-    body: JSON.stringify({ code, payload }),
+    body: JSON.stringify({ code, payload, confirm: !!confirm }),
   })
   const data = await res.json().catch(() => ({}))
   if (res.status >= 500) {
@@ -35,23 +38,42 @@ async function validateScan({ code, payload, env }) {
 /**
  * Alternative au scan QR : validation par le code serie a 8 chiffres saisi a
  * la main par le controleur (voir CodeEntry manuel dans ScannerView.vue).
- * @param {{ code: string, serialCode: string, env?: 'prod'|'test' }} params
+ * @param {{ code: string, serialCode: string, confirm?: boolean, env?: 'prod'|'test' }} params
  * @returns {Promise<object>} la reponse telle que renvoyee par
  *   moov-events (voir backend/src/routes/internal.js:/scan/validate-serial)
  */
-async function validateSerial({ code, serialCode, env }) {
+async function validateSerial({ code, serialCode, confirm, env }) {
   const secret = process.env.SCAN_SERVICE_SECRET
   if (!secret) throw new Error('SCAN_SERVICE_SECRET non configure')
 
   const res = await fetch(`${baseUrlFor(env)}/internal/scan/validate-serial`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-scan-secret': secret },
-    body: JSON.stringify({ code, serialCode }),
+    body: JSON.stringify({ code, serialCode, confirm: !!confirm }),
   })
   const data = await res.json().catch(() => ({}))
   if (res.status >= 500) {
     throw new Error(data.result === 'error' ? 'moov-events indisponible' : `HTTP ${res.status}`)
   }
+  return data
+}
+
+/**
+ * Le controleur a annule la confirmation (ticket propose par erreur, mauvaise
+ * manipulation...) : rien n'a jamais ete consomme, simple trace d'audit.
+ * @param {{ code: string, ticket?: object, env?: 'prod'|'test' }} params
+ */
+async function cancelScan({ code, ticket, env }) {
+  const secret = process.env.SCAN_SERVICE_SECRET
+  if (!secret) throw new Error('SCAN_SERVICE_SECRET non configure')
+
+  const res = await fetch(`${baseUrlFor(env)}/internal/scan/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-scan-secret': secret },
+    body: JSON.stringify({ code, ticket }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (res.status >= 500) throw new Error('moov-events indisponible')
   return data
 }
 
@@ -90,4 +112,4 @@ async function getScanHistory({ code, page, pageSize, env }) {
   return data
 }
 
-module.exports = { validateScan, validateSerial, getAccessCodeInfo, getScanHistory }
+module.exports = { validateScan, validateSerial, cancelScan, getAccessCodeInfo, getScanHistory }
