@@ -17,4 +17,7 @@ Port retenu : 3211/3311 (prod/test).
 - [x] Build `build`/`build:test` vérifiés sans erreur
 - [ ] Test réel sur téléphone (permission caméra, cadrage) : pas encore fait, seulement vérifié
       par build et revue de code
-- [ ] Déploiement (après validation explicite de l'utilisateur)
+- [x] Déployé (test + prod) : voir `servlets/moov-events/TASKS.md` section Déploiement pour le
+      détail complet (secrets, ports, apps.json, nginx). `/moov-events-scan/` et
+      `/moov-events-scan-test/` répondent 200, `/api/moov-events-scan/validate` répond
+      correctement.
