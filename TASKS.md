@@ -60,3 +60,7 @@ Port retenu : 3211/3311 (prod/test).
       consommer réellement. "Annuler" ne défait rien (rien n'a jamais été consommé) et envoie un
       simple événement d'audit (`POST /internal/scan/cancel`), pour garder une trace complète des
       scans annulés sans risque sur l'état des tickets.
+- [x] Mode clair, jusqu'ici absent de cette mini-app (sombre uniquement). Même convention que
+      moov-events (`useTheme.js`, jetons CSS `[data-theme='light']`, clef de stockage propre à
+      cette app), bouton de bascule dans l'en-tête de `CodeEntry.vue` (écran de connexion, pas
+      d'en-tête partagé) et dans celui de `ScannerView.vue` à côté d'"Historique"/"Changer".

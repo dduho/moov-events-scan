@@ -10,6 +10,20 @@
       <div class="flex items-center gap-1.5 shrink-0">
         <button type="button" class="btn-ghost text-xs px-3 py-2" @click="openHistory">Historique</button>
         <button type="button" class="btn-ghost text-xs px-3 py-2" @click="$emit('logout')">Changer</button>
+        <button type="button"
+          class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 active:scale-90"
+          style="color:var(--text-secondary);"
+          :title="isLight ? 'Passer en theme sombre' : 'Passer en theme clair'"
+          @click="toggleTheme"
+        >
+          <svg v-if="isLight" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>
+          </svg>
+          <svg v-else class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="4"/>
+            <path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32 1.41-1.41"/>
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -104,7 +118,9 @@ import { Html5Qrcode } from 'html5-qrcode'
 import ResultOverlay from './ResultOverlay.vue'
 import ConfirmModal from './ConfirmModal.vue'
 import { validateScan, validateSerial, cancelScan, getAccessCodeInfo, getScanHistory } from '../services/scan'
+import { useTheme } from '../composables/useTheme'
 
+const { isLight, toggleTheme } = useTheme()
 const props = defineProps({ code: { type: String, required: true } })
 defineEmits(['logout'])
 

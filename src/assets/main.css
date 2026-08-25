@@ -15,6 +15,21 @@
   --warning: #f59e0b;
 }
 
+/* ── Theme clair, active via data-theme="light" sur <html> (voir useTheme.js) ──
+   Meme jeu de jetons que moov-events/src/assets/main.css, adapte a cette app
+   (pas de --bg-deep/--bg-raised/--violet-glow ici, non utilises par le scanner). */
+[data-theme='light'] {
+  --bg: #f7f6fb;
+  --surface: rgba(20, 10, 40, 0.035);
+  --border: rgba(20, 10, 40, 0.1);
+  --text: #16101f;
+  --text-secondary: #5b566e;
+  --text-tertiary: #8b869c;
+  --success: #15803d;
+  --danger: #dc2626;
+  --warning: #b45309;
+}
+
 * { box-sizing: border-box; }
 html, body {
   background: var(--bg);
@@ -25,6 +40,11 @@ html, body {
   height: 100%;
 }
 #app { min-height: 100dvh; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 999px; }
+[data-theme='light'] ::-webkit-scrollbar-thumb { background: rgba(20,10,40,0.16); }
 
 h1, h2, h3, .font-display { font-family: 'Sora', system-ui, sans-serif; }
 .font-future { font-family: 'Orbitron', system-ui, sans-serif; letter-spacing: 0.03em; }
@@ -60,7 +80,7 @@ h1, h2, h3, .font-display { font-family: 'Sora', system-ui, sans-serif; }
 .btn-ghost:active:not(:disabled) { transform: scale(0.96); }
 
 .input-glass {
-  background: rgba(255,255,255,0.05);
+  background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: 0.9rem;
@@ -75,6 +95,14 @@ h1, h2, h3, .font-display { font-family: 'Sora', system-ui, sans-serif; }
   background:
     radial-gradient(ellipse 120% 80% at 20% -10%, rgba(255,122,26,0.14), transparent 60%),
     radial-gradient(ellipse 100% 70% at 100% 10%, rgba(139,92,246,0.12), transparent 55%),
+    var(--bg);
+}
+/* Memes halos qu'en sombre mais attenues (evite un fond trop charge sur un
+   gris clair, meme dosage que moov-events/src/assets/main.css). */
+[data-theme='light'] .ambient-bg {
+  background:
+    radial-gradient(ellipse 120% 80% at 20% -10%, rgba(255,122,26,0.10), transparent 60%),
+    radial-gradient(ellipse 100% 70% at 100% 10%, rgba(139,92,246,0.08), transparent 55%),
     var(--bg);
 }
 
