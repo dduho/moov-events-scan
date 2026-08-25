@@ -37,3 +37,15 @@ Port retenu : 3211/3311 (prod/test).
 - [x] Compteur "Rejetés" qui incrémentait en boucle pour un même QR immobile dans le cadre
       (la caméra redécode en continu) : un code strictement identique au précédent est
       désormais ignoré tant qu'il n'a pas été explicitement rejoué (tap manuel sur le résultat).
+      **Corrigé une seconde fois** : le premier correctif bloquait aussi la transition
+      valide → déjà_utilisé (un ticket rescanné juste après n'affichait plus rien du tout).
+      Chaque scan revalide toujours auprès du serveur (l'état peut avoir changé entre deux
+      scans), mais ne recompte que si le résultat diffère du précédent pour ce même code.
+- [x] Cadre de scan rendu carré : `qrbox` fixe `{240,240}` dépendait du ratio vidéo réel du
+      téléphone (souvent large), recalculé désormais depuis les dimensions réelles du
+      viewfinder au démarrage.
+- [x] En-tête du scanner affiche le nom de l'événement (`GET /internal/scan/access-code-info`
+      côté moov-events) au lieu du seul code d'accès brut.
+- [x] Historique persistant des scans par code d'accès (bouton "Historique"), survit à un
+      rechargement de page contrairement aux compteurs de session, interroge le journal
+      d'activité de moov-events filtré par code (`GET /internal/scan/history`).
