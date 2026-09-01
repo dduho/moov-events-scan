@@ -1,7 +1,11 @@
 <template>
   <transition name="result-pop">
+    <!-- Meme fond volontairement toujours sombre que ConfirmModal.vue, meme
+         raison : couleurs de texte figees en clair, jamais liees aux jetons
+         de theme qui basculeraient en texte sombre illisible sur un
+         telephone regle en theme clair. -->
     <div v-if="result" class="fixed inset-0 z-40 flex items-center justify-center px-6" style="background:rgba(6,6,12,0.88);backdrop-filter:blur(6px);" @click="$emit('dismiss')">
-      <div class="glass rounded-3xl p-8 text-center max-w-xs w-full" :style="borderStyle" @click.stop>
+      <div class="rounded-3xl p-8 text-center max-w-xs w-full" :style="{ background: 'rgba(30,26,46,0.92)', ...borderStyle }" @click.stop>
         <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" :style="iconBg">
           <svg v-if="config.icon === 'check'" class="w-8 h-8" :style="{ color: config.color }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/>
@@ -13,9 +17,9 @@
             <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M15 9l-6 6m0-6 6 6"/>
           </svg>
         </div>
-        <h2 class="font-display text-lg font-bold mb-1">{{ config.title }}</h2>
-        <p class="text-sm" style="color:var(--text-secondary);">{{ config.subtitle }}</p>
-        <p v-if="ticket?.label" class="text-xs mt-3 font-future tracking-wide" style="color:var(--text-tertiary);">
+        <h2 class="font-display text-lg font-bold mb-1" style="color:#f5f5fa;">{{ config.title }}</h2>
+        <p class="text-sm" style="color:#9a9db3;">{{ config.subtitle }}</p>
+        <p v-if="ticket?.label" class="text-xs mt-3 font-future tracking-wide" style="color:#6b6e85;">
           {{ ticket.label }} · {{ ticket.eventTitle }}
         </p>
       </div>
