@@ -6,14 +6,19 @@ require('dotenv').config({ path: path.join(__dirname, '..', envFile) })
 
 const express   = require('express')
 const cors      = require('cors')
-const rateLimit = require('express-rate-limit')
 
 const scanRoutes = require('./routes/scan')
 
 const app  = express()
 const PORT = process.env.PORT || 3211
 
-app.set('trust proxy', 1)
+// = 2, PAS 1 : chaque requete publique traverse deux sauts avant d'atteindre
+// ce process (boucle nginx interne 8080->443 de la plateforme, PUIS le proxy
+// dynamique de moovapps-api vers ce backend, qui transmet X-Forwarded-For
+// tel quel sans ajouter de saut). Avec 1, req.ip retombait sur l'adresse de
+// boucle du dernier saut (127.0.0.1) - meme bug que
+// platform/backend/src/index.js (chantier robustesse, voir MEMORY.md).
+app.set('trust proxy', 2)
 
 // -- CORS -----------------------------------------------------------------
 const rawOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5174'
@@ -22,14 +27,12 @@ app.use(cors({ origin: allowedOrigins, credentials: true }))
 
 app.use(express.json({ limit: '256kb' }))
 
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 300, // volume potentiellement eleve a l'entree d'un evenement
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Trop de requetes, veuillez reessayer dans une minute.' },
-})
-app.use('/api/', apiLimiter)
+// Pas de rate-limit bloquant par IP : plusieurs controleurs a l'entree d'un
+// meme evenement peuvent partager la meme passerelle reseau (comme tout le
+// trafic public WebView, voir platform/backend), bloquer par IP risquerait
+// de bloquer tous les scanners d'un evenement a la fois en cas d'affluence.
+// La detection d'abus tourne au niveau de la plateforme
+// (platform/backend/src/services/abuseDetector.js).
 
 // -- Routes -----------------------------------------------------------------
 const apiPrefixes = [...new Set([
