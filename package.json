@@ -1,6 +1,6 @@
 {
   "name": "moov-events-scan",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Scanner de tickets Moov Events",
   "scripts": {

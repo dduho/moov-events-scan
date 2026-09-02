@@ -1,6 +1,6 @@
 {
   "name": "moov-events-scan-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Backend standalone pour la mini-app Moov Events Scan (scanner de tickets QR)",
   "main": "src/index.js",
