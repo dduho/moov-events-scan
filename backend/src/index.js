@@ -2,7 +2,13 @@
 const path = require('path')
 
 const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env'
-require('dotenv').config({ path: path.join(__dirname, '..', envFile) })
+// override:true indispensable : le bouton "Deployer" (pm2 delete + pm2 start)
+// relance ce process sans jamais vider l'environnement herite du demon PM2 -
+// une variable qui y a fui un jour (ex. DATABASE_URL d'une autre app) gagne
+// sinon systematiquement sur celle du fichier .env(.test) a chaque
+// redeploiement. Meme pattern que mini-app-momo/kyc-update/inam-assurances/
+// school-lead (voir MEMORY.md).
+require('dotenv').config({ path: path.join(__dirname, '..', envFile), override: true })
 
 const express   = require('express')
 const cors      = require('cors')
