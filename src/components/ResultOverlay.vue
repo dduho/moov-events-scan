@@ -17,7 +17,7 @@
             <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M15 9l-6 6m0-6 6 6"/>
           </svg>
         </div>
-        <h2 class="font-display text-lg font-bold mb-1" style="color:#f5f5fa;">{{ config.title }}</h2>
+        <h2 class="font-display text-lg font-bold mb-1" style="color:#f5f5fa;">{{ title }}</h2>
         <p class="text-sm" style="color:#9a9db3;">{{ config.subtitle }}</p>
         <p v-if="ticket?.label" class="text-xs mt-3 font-future tracking-wide" style="color:#6b6e85;">
           {{ ticket.label }} · {{ ticket.eventTitle }}
@@ -44,10 +44,21 @@ const CONFIGS = {
   invalid_code: { icon: 'cross', color: '#ef4444', border: 'rgba(239,68,68,0.4)', bg: 'rgba(239,68,68,0.15)', title: 'Code d\'acces invalide', subtitle: 'Ce code a ete revoque ou n\'existe pas.' },
   wrong_event:  { icon: 'cross', color: '#ef4444', border: 'rgba(239,68,68,0.4)', bg: 'rgba(239,68,68,0.15)', title: 'Mauvais evenement', subtitle: 'Ce ticket appartient a un autre evenement.' },
   void:         { icon: 'cross', color: '#ef4444', border: 'rgba(239,68,68,0.4)', bg: 'rgba(239,68,68,0.15)', title: 'Ticket annule', subtitle: 'Ce ticket n\'est plus valable.' },
+  expired:      { icon: 'cross', color: '#ef4444', border: 'rgba(239,68,68,0.4)', bg: 'rgba(239,68,68,0.15)', title: 'Evenement termine', subtitle: 'Cet evenement est termine, ce ticket n\'est plus scannable.' },
   error:        { icon: 'cross', color: '#ef4444', border: 'rgba(239,68,68,0.4)', bg: 'rgba(239,68,68,0.15)', title: 'Erreur', subtitle: 'Reessayez dans un instant.' },
 }
 
 const config = computed(() => CONFIGS[props.result] || CONFIGS.error)
+// Cas 'valid' : le titre generique "Ticket valide" est remplace par le
+// code court du ticket ("Ticket A1B2C3D4 validé avec succès"), demande
+// explicite - directement identifiable a l'oral entre le controleur et
+// l'entree, plutot qu'un libelle generique qui ne distingue pas les tickets.
+const title = computed(() => {
+  if (props.result === 'valid' && props.ticket?.id) {
+    return `Ticket ${props.ticket.id.slice(0, 8).toUpperCase()} validé avec succès`
+  }
+  return config.value.title
+})
 const borderStyle = computed(() => ({ border: `1px solid ${config.value.border}`, boxShadow: `0 0 40px -8px ${config.value.border}` }))
 const iconBg = computed(() => ({ background: config.value.bg }))
 </script>

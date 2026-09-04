@@ -52,13 +52,23 @@
     <div v-else class="flex-1 flex flex-col items-center justify-center px-5 py-6">
       <template v-if="!manualMode">
         <div class="scan-frame w-full max-w-sm aspect-square relative">
-          <div id="qr-reader" class="w-full h-full"></div>
-          <div class="scan-line"></div>
+          <div v-if="cameraActive" id="qr-reader" class="w-full h-full"></div>
+          <div v-else class="w-full h-full flex flex-col items-center justify-center gap-3 px-6 text-center" style="color:var(--text-tertiary);">
+            <svg class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h2l1.5-2h7L17 5h2a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+              <circle cx="12" cy="13" r="3.5"/>
+            </svg>
+            <p class="text-xs">Scanner fermé</p>
+          </div>
+          <div v-if="cameraActive" class="scan-line"></div>
         </div>
-        <p class="text-xs mt-5 text-center max-w-xs" style="color:var(--text-secondary);">
+        <p v-if="cameraActive" class="text-xs mt-5 text-center max-w-xs" style="color:var(--text-secondary);">
           Cadrez le QR code du ticket dans la zone.
         </p>
-        <button type="button" class="btn-ghost text-xs px-4 py-2 mt-4" @click="manualMode = true">
+        <button type="button" class="btn-accent text-sm px-6 py-2.5 mt-5" @click="toggleCamera">
+          {{ cameraActive ? 'Fermer le scanner' : 'Ouvrir le scanner' }}
+        </button>
+        <button type="button" class="btn-ghost text-xs px-4 py-2 mt-3" @click="manualMode = true">
           Pas de QR ? Saisir le code
         </button>
       </template>
@@ -131,7 +141,7 @@ const history = ref([])
 
 const HISTORY_LABELS = {
   valid: 'Valide', already_used: 'Deja utilise', invalid: 'Invalide',
-  invalid_code: 'Code invalide', wrong_event: 'Mauvais evenement', void: 'Annule', error: 'Erreur',
+  invalid_code: 'Code invalide', wrong_event: 'Mauvais evenement', void: 'Annule', expired: 'Evenement termine', error: 'Erreur',
 }
 function historyResultLabel(result) { return HISTORY_LABELS[result] || result || '?' }
 function historyBadgeClass(result) {
@@ -183,6 +193,26 @@ const counts = reactive({ valid: 0, already_used: 0, rejected: 0 })
 // decision explicite du controleur avant de rappeler avec confirm:true.
 const pendingConfirm = ref(null) // { matchedVia: 'qr'|'serial', payload, ticket }
 const confirming = ref(false)
+
+// La camera ne s'ouvre plus automatiquement a l'arrivee sur l'ecran de scan
+// (demande explicite) : `cameraActive` porte l'intention du controleur
+// (ouvert/ferme), independamment des arrets techniques temporaires (saisie
+// manuelle, historique) qui coupent le flux video sans jamais changer cette
+// intention - au retour sur l'ecran de scan, la camera ne redemarre que si
+// elle etait actives avant l'interruption.
+const cameraActive = ref(false)
+
+async function toggleCamera() {
+  if (cameraActive.value) {
+    cameraActive.value = false
+    await scanner?.stop().catch(() => {})
+    scanner = null
+  } else {
+    cameraActive.value = true
+    await nextTick()
+    await startCamera()
+  }
+}
 
 const manualMode = ref(false)
 const manualCode = ref('')
@@ -347,7 +377,7 @@ watch(manualMode, async (isManual) => {
   if (isManual) {
     await scanner?.stop().catch(() => {})
     scanner = null
-  } else if (!historyMode.value) {
+  } else if (!historyMode.value && cameraActive.value) {
     await nextTick()
     await startCamera()
   }
@@ -357,14 +387,13 @@ watch(historyMode, async (isHistory) => {
   if (isHistory) {
     await scanner?.stop().catch(() => {})
     scanner = null
-  } else if (!manualMode.value) {
+  } else if (!manualMode.value && cameraActive.value) {
     await nextTick()
     await startCamera()
   }
 })
 
 onMounted(async () => {
-  startCamera()
   try {
     const info = await getAccessCodeInfo(props.code)
     if (info.ok) eventTitle.value = info.eventTitle || ''
