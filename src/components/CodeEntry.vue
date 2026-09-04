@@ -34,9 +34,11 @@
         maxlength="8"
         placeholder="CODE"
         autofocus
+        @input="error = ''"
       />
-      <button type="submit" class="btn-accent w-full" :disabled="!code">
-        Demarrer le scan
+      <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
+      <button type="submit" class="btn-accent w-full" :disabled="!code || checking">
+        {{ checking ? 'Vérification…' : 'Demarrer le scan' }}
       </button>
     </form>
   </div>
@@ -45,13 +47,34 @@
 <script setup>
 import { ref } from 'vue'
 import { useTheme } from '../composables/useTheme'
+import { getAccessCodeInfo } from '../services/scan'
 
 const { isLight, toggleTheme } = useTheme()
 const emit = defineEmits(['connected'])
 const code = ref('')
+const checking = ref(false)
+const error = ref('')
 
-function submit() {
-  if (!code.value) return
-  emit('connected', code.value.trim().toUpperCase())
+// Bug reel constate : n'importe quel code tape ouvrait le scanner, la
+// validation reelle (getAccessCodeInfo, avec le bon environnement test/prod
+// deja porte par le service) n'intervenait qu'au premier scan. Un code
+// inconnu doit etre rejete ICI, avant meme d'entrer dans l'ecran de scan.
+async function submit() {
+  const value = code.value.trim().toUpperCase()
+  if (!value || checking.value) return
+  checking.value = true
+  error.value = ''
+  try {
+    const info = await getAccessCodeInfo(value)
+    if (!info.ok) {
+      error.value = 'Code d\'accès invalide ou expiré.'
+      return
+    }
+    emit('connected', value)
+  } catch {
+    error.value = 'Impossible de vérifier ce code, réessayez.'
+  } finally {
+    checking.value = false
+  }
 }
 </script>
